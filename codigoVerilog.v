@@ -14,8 +14,9 @@ module fetch (input zero, rst, clk, branch, input [31:0] sigext, output [31:0] i
   initial begin
     // Exemplos
     //inst_mem[0] <= 32'h00a16093;   //ori x1,x2,10
-    inst_mem[0] <= 32'h00000000; // nop
-    inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
+    //inst_mem[0] <= 32'h00329093; //slli x1,x5,3 00000000001000101001000010010011
+    //inst_mem[0] <= 32'h00000000; // nop
+    //inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
     //inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
     //inst_mem[1] <= 32'h00202223; // sw x2, 8(x0) ok
     //inst_mem[1] <= 32'h0050a423; // sw x5, 8(x1) ok
@@ -149,6 +150,7 @@ module alucontrol (input [1:0] aluop, input [9:0] funct, output reg [3:0] alucon
       0:begin
         	case(funct3)
           		6: alucontrol <= 4'd1;
+              	1: alucontrol <= 4'd3;
           		default: alucontrol <= 4'd2; // ADD to SW and LW
           	endcase
       	end
@@ -176,6 +178,7 @@ module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout,
         0: aluout <= A & B; // AND
         1: aluout <= A | B; // OR
         2: aluout <= A + B; // ADD
+        3: aluout <= A << B; //SLLI
         6: aluout <= A - B; // SUB
         //7: aluout <= A < B ? 32'd1:32'd0; //SLT
         //12: aluout <= ~(A | B); // NOR
