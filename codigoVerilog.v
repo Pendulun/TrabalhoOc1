@@ -13,9 +13,10 @@ module fetch (input zero, rst, clk, branch, input [31:0] sigext, output [31:0] i
 
   initial begin
     // Exemplos
+    //inst_mem[0] <= 32'h00a16093;   //ori x1,x2,10
     inst_mem[0] <= 32'h00000000; // nop
     inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
-    inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
+    //inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
     //inst_mem[1] <= 32'h00202223; // sw x2, 8(x0) ok
     //inst_mem[1] <= 32'h0050a423; // sw x5, 8(x1) ok
     //inst_mem[2] <= 32'h0000a003; // lw x1, x0(0) ok
@@ -78,7 +79,7 @@ module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc, me
         aluop    <= 1;
         ImmGen   <= {{19{inst[31]}},inst[31],inst[7],inst[30:25],inst[11:8],1'b0};
 			end
-			7'b0010011: begin // addi == 19
+			7'b0010011: begin // addi == 19 TIPO - I
         alusrc   <= 1;
         regwrite <= 1;
         ImmGen   <= {{20{inst[31]}},inst[31:20]};
@@ -126,7 +127,7 @@ module execute (input [31:0] in1, in2, ImmGen, input alusrc, input [1:0] aluop, 
   wire [31:0] alu_B;
   wire [3:0] aluctrl;
   
-  assign alu_B = (alusrc) ? ImmGen : in2 ;
+  assign alu_B = (alusrc) ? ImmGen : in2 ; // Decide entre o Imm gen e o rs2
 
   //Unidade Lógico Aritimética
   ALU alu (aluctrl, in1, alu_B, aluout, zero);
@@ -145,7 +146,12 @@ module alucontrol (input [1:0] aluop, input [9:0] funct, output reg [3:0] alucon
 
   always @(aluop) begin
     case (aluop)
-      0: alucontrol <= 4'd2; // ADD to SW and LW
+      0:begin
+        	case(funct3)
+          		6: alucontrol <= 4'd1;
+          		default: alucontrol <= 4'd2; // ADD to SW and LW
+          	endcase
+      	end
       1: alucontrol <= 4'd6; // SUB to branch
       default: begin
         case (funct3)
