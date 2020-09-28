@@ -15,6 +15,8 @@ module fetch (input zero, rst, clk, branch, input [31:0] sigext, output [31:0] i
     // Exemplos
     //inst_mem[0] <= 32'h00a16093;   //ori x1,x2,10
     //inst_mem[0] <= 32'h00329093; //slli x1,x5,3 00000000001000101001000010010011
+    //inst_mem[0] <= 32'h000052b7; //lui x5,5 00000000000000000101001010110111
+    //inst_mem[0] <= 32'h001452b7; //lui x5,325 00000000000101000101001010110111
     //inst_mem[0] <= 32'h00000000; // nop
     //inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
     //inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
@@ -97,6 +99,12 @@ module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc, me
         memwrite <= 1;
         ImmGen   <= {{20{inst[31]}},inst[31:25],inst[11:7]};
       end
+      		7'b0110111: begin //LUI
+        alusrc   <= 1;
+        regwrite <= 1;
+        aluop    <= 3;
+              ImmGen   <= {inst[31:12],12'b0};
+      end
     endcase
   end
 
@@ -155,6 +163,7 @@ module alucontrol (input [1:0] aluop, input [9:0] funct, output reg [3:0] alucon
           	endcase
       	end
       1: alucontrol <= 4'd6; // SUB to branch
+      3: alucontrol <= 4'd4; //Usado pelo lui
       default: begin
         case (funct3)
           0: alucontrol <= (funct7 == 0) ? /*ADD*/ 4'd2 : /*SUB*/ 4'd6; 
@@ -179,6 +188,7 @@ module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout,
         1: aluout <= A | B; // OR
         2: aluout <= A + B; // ADD
         3: aluout <= A << B; //SLLI
+        4: aluout <= B; //LUI
         6: aluout <= A - B; // SUB
         //7: aluout <= A < B ? 32'd1:32'd0; //SLT
         //12: aluout <= ~(A | B); // NOR
