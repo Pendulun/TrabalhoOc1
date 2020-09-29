@@ -17,6 +17,7 @@ module fetch (input zero, rst, clk, branch, input [31:0] sigext, output [31:0] i
     //inst_mem[0] <= 32'h00329093; //slli x1,x5,3 00000000001000101001000010010011
     //inst_mem[0] <= 32'h000052b7; //lui x5,5 00000000000000000101001010110111
     //inst_mem[0] <= 32'h001452b7; //lui x5,325 00000000000101000101001010110111
+    //inst_mem[0] <= 32'h0041508a; //lwi x1, x2, x4 00000000010000010101000010001010
     //inst_mem[0] <= 32'h00000000; // nop
     //inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
     //inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
@@ -105,6 +106,12 @@ module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc, me
         aluop    <= 3;
               ImmGen   <= {inst[31:12],12'b0};
       end
+      		7'b0001010: begin // LWI == 10 OBS.: Meu funct será 5, para cair que alucontrol = 5 (usei funct 5 de tipo r emprestada)
+        alusrc   <= 0;
+        memtoreg <= 1;
+        regwrite <= 1;
+        memread  <= 1;
+	  end
     endcase
   end
 
@@ -159,6 +166,7 @@ module alucontrol (input [1:0] aluop, input [9:0] funct, output reg [3:0] alucon
         	case(funct3)
           		6: alucontrol <= 4'd1;
               	1: alucontrol <= 4'd3;
+              	5: alucontrol <= 4'd5; //LWI
           		default: alucontrol <= 4'd2; // ADD to SW and LW
           	endcase
       	end
@@ -189,6 +197,7 @@ module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout,
         2: aluout <= A + B; // ADD
         3: aluout <= A << B; //SLLI
         4: aluout <= B; //LUI
+        5: aluout <= (A + B) << 2; //LWI
         6: aluout <= A - B; // SUB
         //7: aluout <= A < B ? 32'd1:32'd0; //SLT
         //12: aluout <= ~(A | B); // NOR
