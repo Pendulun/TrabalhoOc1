@@ -1,0 +1,36 @@
+// Alguns exemplos providos no arquivo inicial
+    //inst_mem[0] <= 32'h00000000; // nop
+    //inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
+    //inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
+    //inst_mem[1] <= 32'h00202223; // sw x2, 8(x0) ok
+    //inst_mem[1] <= 32'h0050a423; // sw x5, 8(x1) ok
+    //inst_mem[2] <= 32'h0000a003; // lw x1, x0(0) ok
+    //inst_mem[1] <= 32'hfff00113; // addi x2,x0,-1 ok
+    //inst_mem[2] <= 32'h00318133; // add x2, x3, x3 ok
+
+// Problema 1 (ori rd, rs1, imm)
+    //inst_mem[0] <= 32'h00a16093;   //ori x1,x2,10
+
+// Problema 2 (slli rd, rs1, imm)
+    //inst_mem[0] <= 32'h00329093; //slli x1,x5,3 00000000001000101001000010010011
+
+// Problema 3 (lui rd, imm)
+    //inst_mem[0] <= 32'h000052b7; //lui x5,5 00000000000000000101001010110111
+    //inst_mem[0] <= 32'h001452b7; //lui x5,325 00000000000101000101001010110111
+
+// Problema 4 (lwi rd, rs1, rs2)
+    //inst_mem[0] <= 32'h0041508a; //lwi x1, x2, x4 00000000010000010101000010001010
+
+// Problema 5 (swap rs1, rs2)
+// Conjunto de testes(inclui dependência de dados na terceira e quarta instrução):
+    inst_mem[0] <= 32'h00000000;  // nop
+    inst_mem[1] <= 32'h520002;    // swap x4 x5
+    inst_mem[2] <= 32'h40428133; // sub x2, x5, x4 0100 0000 0100 0010 1000 0001 0011 0011
+    inst_mem[3] <= 32'h00210233; // add  x4, x2, x2  ok
+    inst_mem[4] <= 32'h660002;    // swap x12 x6
+
+// Problema 6 (ss rs1, rs2, imm) - testes fornecidos pelo monitor
+  //inst_mem[0] <= 32'h00000000;  // nop
+  //inst_mem[1] <= 32'h508004;    // ss x1 x5 0
+  //inst_mem[2] <= 32'h508284;    // ss x1 x5 5
+  //inst_mem[3] <= 32'h248684;    // ss x9 x2 13

@@ -12,26 +12,13 @@ module fetch (input zero, rst, clk, branch, input [31:0] sigext, output [31:0] i
   assign inst = inst_mem[pc[31:2]];
 
   initial begin
-    // Exemplos
-    //inst_mem[0] <= 32'h00a16093;   //ori x1,x2,10
-    //inst_mem[0] <= 32'h00329093; //slli x1,x5,3 00000000001000101001000010010011
-    //inst_mem[0] <= 32'h000052b7; //lui x5,5 00000000000000000101001010110111
-    //inst_mem[0] <= 32'h001452b7; //lui x5,325 00000000000101000101001010110111
-    //inst_mem[0] <= 32'h0041508a; //lwi x1, x2, x4 00000000010000010101000010001010
+    // Testes
+    //SS
     inst_mem[0] <= 32'h00000000;  // nop
-    inst_mem[1] <= 32'h520002;    // swap x4 x5
-    inst_mem[2] <= 32'h40428133; // sub x2, x5, x4 0100 0000 0100 0010 1000 0001 0011 0011
-    inst_mem[3] <= 32'h00210233; // add  x4, x2, x2  ok
-    inst_mem[4] <= 32'h660002;    // swap x12 x6
-    //inst_mem[0] <= 32'h00000000; // nop
-    //inst_mem[1] <= 32'h00500113; // addi x2, x0, 5  ok
-    //inst_mem[2] <= 32'h00210233; // add  x4, x2, x2  ok
-    //inst_mem[1] <= 32'h00202223; // sw x2, 8(x0) ok
-    //inst_mem[1] <= 32'h0050a423; // sw x5, 8(x1) ok
-    //inst_mem[2] <= 32'h0000a003; // lw x1, x0(0) ok
-    //inst_mem[1] <= 32'hfff00113; // addi x2,x0,-1 ok
-    //inst_mem[2] <= 32'h00318133; // add x2, x3, x3 ok
-    //
+    inst_mem[1] <= 32'h508004;    // ss x1 x5 0 0000 0000 0101 0000 1000 0000 0000 0100
+    inst_mem[2] <= 32'h508284;    // ss x1 x5 5 0000 0000 0101 0000 1000 0010 1000 0100
+    inst_mem[3] <= 32'h248684;    // ss x9 x2 13
+    
   end
   
 endmodule
@@ -46,9 +33,9 @@ module PC (input [31:0] pc_in, input clk, rst, output reg [31:0] pc_out);
 
 endmodule
 
-module decode (input [31:0] inst, writedata, writedata2, input clk, output [31:0] data1, data2, ImmGen, output alusrc, memread, memwrite, memtoreg, branch, output [1:0] aluop, output [9:0] funct);
+module decode (input [31:0] inst, writedata, writedata2, input clk, output [31:0] data1, data2, ImmGen, output alusrc2, alusrc1, memsrc, memread, memwrite, memtoreg, branch, output [1:0] aluop, output [9:0] funct);
   
-  wire branch, memread, memtoreg, MemWrite, alusrc, regwrite, regwrite2;
+  wire branch, memsrc, memread, memtoreg, MemWrite, alusrc2, alusrc1, regwrite, regwrite2;
   wire [1:0] aluop; 
   wire [4:0] writereg, rs1, rs2, rd;
   wire [6:0] opcode;
@@ -61,19 +48,21 @@ module decode (input [31:0] inst, writedata, writedata2, input clk, output [31:0
   assign rd     = inst[11:7];
   assign funct = {inst[31:25],inst[14:12]};
 
-  ControlUnit control (opcode, inst, alusrc, memtoreg, regwrite, regwrite2, memread, memwrite, branch, aluop, ImmGen);
+  ControlUnit control (opcode, inst, alusrc2, alusrc1, memtoreg, regwrite, regwrite2, memsrc, memread, memwrite, branch, aluop, ImmGen);
   
   Register_Bank Registers (clk, regwrite, regwrite2, rs1, rs2, rd, writedata, writedata2, data1, data2); 
 
 endmodule
 
-module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc, memtoreg, regwrite, regwrite2, memread, memwrite, branch, output reg [1:0] aluop, output reg [31:0] ImmGen);
+module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc2, alusrc1, memtoreg, regwrite, regwrite2, memsrc, memread, memwrite, branch, output reg [1:0] aluop, output reg [31:0] ImmGen);
 
   always @(opcode) begin
-    alusrc    <= 0;
+    alusrc2   <= 0;
+    alusrc1   <= 0;
     memtoreg  <= 0;
     regwrite  <= 0;
     regwrite2 <= 0;
+    memsrc    <= 0;
     memread   <= 0;
     memwrite  <= 0;
     branch    <= 0;
@@ -81,53 +70,60 @@ module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc, me
     ImmGen    <= 0; 
     case(opcode) 
       7'b0110011: begin // R type == 51
-        regwrite <= 1;
-        aluop    <= 2;
+        regwrite  <= 1;
+        aluop     <= 2;
 			end
 		  7'b1100011: begin // beq == 99
-        branch   <= 1;
-        aluop    <= 1;
-        ImmGen   <= {{19{inst[31]}},inst[31],inst[7],inst[30:25],inst[11:8],1'b0};
+        branch    <= 1;
+        aluop     <= 1;
+        ImmGen    <= {{19{inst[31]}},inst[31],inst[7],inst[30:25],inst[11:8],1'b0};
 			end
 			7'b0010011: begin // addi == 19 TIPO - I
-        alusrc   <= 1;
-        regwrite <= 1;
-        ImmGen   <= {{20{inst[31]}},inst[31:20]};
+        alusrc2   <= 1;
+        regwrite  <= 1;
+        ImmGen    <= {{20{inst[31]}},inst[31:20]};
       end
 			7'b0000011: begin // lw == 3
-        alusrc   <= 1;
-        memtoreg <= 1;
-        regwrite <= 1;
-        memread  <= 1;
-        ImmGen   <= {{20{inst[31]}},inst[31:20]};
+        alusrc2   <= 1;
+        memtoreg  <= 1;
+        regwrite  <= 1;
+        memread   <= 1;
+        ImmGen    <= {{20{inst[31]}},inst[31:20]};
       end
 			7'b0100011: begin // sw == 35
-        alusrc   <= 1;
-        memwrite <= 1;
-        ImmGen   <= {{20{inst[31]}},inst[31:25],inst[11:7]};
+        alusrc2   <= 1;
+        memwrite  <= 1;
+        ImmGen    <= {{20{inst[31]}},inst[31:25],inst[11:7]};
       end
-      		7'b0110111: begin //LUI
-        alusrc   <= 1;
-        regwrite <= 1;
-        aluop    <= 3;
+      		7'b0110111: begin //LUI == 55
+        alusrc2   <= 1;
+        regwrite  <= 1;
+        aluop     <= 3;
               ImmGen   <= {inst[31:12],12'b0};
       end
       		7'b0001010: begin // LWI == 10 OBS.: Meu funct será 5, para cair que alucontrol = 5 (usei funct 5 de tipo r emprestada)
-        alusrc   <= 0;
-        memtoreg <= 1;
-        regwrite <= 1;
-        memread  <= 1;
+        alusrc2   <= 0;
+        memtoreg  <= 1;
+        regwrite  <= 1;
+        memread   <= 1;
 			
 			end
-			7'b0000010: begin // swap
-        alusrc    <= 1;
+			7'b0000010: begin // swap == 2
+        alusrc2   <= 1;
         regwrite  <= 1;
         regwrite2 <= 1;
+			end
+			7'b0000100: begin // ss == 8
+        alusrc1   <= 1;
+        alusrc2   <= 1;
+        memsrc    <= 1;
+        memwrite  <= 1;
+        ImmGen    <= {{20{inst[31]}},inst[31:25],inst[11:7]};
 			end
     endcase
   end
 
-endmodule 
+endmodule
 
 module Register_Bank (input clk, regwrite, regwrite2, input [4:0] read_reg1, read_reg2, writereg, input [31:0] writedata, writedata2, output [31:0] read_data1, read_data2);
 
@@ -147,22 +143,26 @@ module Register_Bank (input clk, regwrite, regwrite2, input [4:0] read_reg1, rea
     if (regwrite && ~regwrite2)
       memory[writereg] <= writedata;
     else if (regwrite && regwrite2) begin // swap
-      memory[read_reg1] <= writedata2; // Por enquanto, só possibilita escrita em read_reg1
+      memory[read_reg1] <= writedata2; // Por enquanto, só possibilita escrita em read_reg1 utilizando writedata2.
       memory[read_reg2] <= writedata;
     end
   end
   
 endmodule
 
-module execute (input [31:0] in1, in2, ImmGen, input alusrc, input [1:0] aluop, input [9:0] funct, output zero, output [31:0] aluout);
+module execute (input [31:0] in1, in2, ImmGen, input alusrc2, alusrc1, input [1:0] aluop, input [9:0] funct, output zero, output [31:0] aluout1, aluout2);
 
-  wire [31:0] alu_B;
+  wire [31:0] alu_A, alu_B;
   wire [3:0] aluctrl;
   
-  assign alu_B = (alusrc) ? ImmGen : in2 ; // Decide entre o Imm gen e o rs2
+  assign alu_A = (alusrc1) ? in2 : in1 ;
+  assign alu_B = (alusrc2) ? ImmGen : in2 ; // Decide entre o Imm gen e o rs2
+
+  // Primeira mão da saída aluout1
+  assign aluout1 = in1;
 
   //Unidade Lógico Aritimética
-  ALU alu (aluctrl, in1, alu_B, aluout, zero);
+  ALU alu (aluctrl, alu_A, alu_B, aluout2, zero);
 
   alucontrol alucontrol (aluop, funct, aluctrl);
 
@@ -202,22 +202,22 @@ module alucontrol (input [1:0] aluop, input [9:0] funct, output reg [3:0] alucon
   end
 endmodule
 
-module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout, output zero);
+module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout2, output zero);
   
-  assign zero = (aluout == 0); // Zero recebe um valor lógico caso aluout seja igual a zero.
+  assign zero = (aluout2 == 0); // Zero recebe um valor lógico caso aluout2 seja igual a zero.
   
   always @(alucontrol, A, B) begin
       case (alucontrol)
-        0: aluout <= A & B; // AND
-        1: aluout <= A | B; // OR
-        2: aluout <= A + B; // ADD
-        3: aluout <= A << B; //SLLI
-        4: aluout <= B; //LUI
-        5: aluout <= (A + B) << 2; //LWI
-        6: aluout <= A - B; // SUB
-        //7: aluout <= A < B ? 32'd1:32'd0; //SLT
-        //12: aluout <= ~(A | B); // NOR
-      default: aluout <= 0; //default 0, Nada acontece;
+        0: aluout2 <= A & B; // AND
+        1: aluout2 <= A | B; // OR
+        2: aluout2 <= A + B; // ADD
+        3: aluout2 <= A << B; //SLLI
+        4: aluout2 <= B; //LUI
+        5: aluout2 <= (A + B) << 2; //LWI
+        6: aluout2 <= A - B; // SUB
+        //7: aluout2 <= A < B ? 32'd1:32'd0; //SLT
+        //12: aluout2 <= ~(A | B); // NOR
+      default: aluout2 <= 0; //default 0, Nada acontece;
     endcase
   end
 endmodule
@@ -241,9 +241,9 @@ module memory (input [31:0] address, writedata, input memread, memwrite, clk, ou
 	end
 endmodule
 
-module writeback (input [31:0] aluout, readdata, rawrs2, input memtoreg, output reg [31:0] write_data, write_data2);
+module writeback (input [31:0] aluout2, readdata, rawrs2, input memtoreg, output reg [31:0] write_data, write_data2);
   always @(memtoreg) begin
-    write_data  <= (memtoreg) ? readdata : aluout;
+    write_data  <= (memtoreg) ? readdata : aluout2;
     write_data2 <= rawrs2;
   end
 endmodule
@@ -251,8 +251,8 @@ endmodule
 // TOP -------------------------------------------
 module mips (input clk, rst, output [31:0] writedata, writedata2);
   
-  wire [31:0] inst, sigext, data1, data2, aluout, readdata;
-  wire zero, memread, memwrite, memtoreg, branch, alusrc;
+  wire [31:0] inst, sigext, data1, data2, aluout1, aluout2, readdata, memadr, memdata;
+  wire zero, memsrc, memread, memwrite, memtoreg, branch, alusrc2, alusrc1;
   wire [9:0] funct;
   wire [1:0] aluop;
   
@@ -260,15 +260,18 @@ module mips (input clk, rst, output [31:0] writedata, writedata2);
   fetch fetch (zero, rst, clk, branch, sigext, inst);
   
   // DECODE STAGE
-  decode decode (inst, writedata, writedata2, clk, data1, data2, sigext, alusrc, memread, memwrite, memtoreg, branch, aluop, funct);   
+  decode decode (inst, writedata, writedata2, clk, data1, data2, sigext, alusrc2, alusrc1, memsrc, memread, memwrite, memtoreg, branch, aluop, funct);   
   
   // EXECUTE STAGE
-  execute execute (data1, data2, sigext, alusrc, aluop, funct, zero, aluout);
+  execute execute (data1, data2, sigext, alusrc2, alusrc1, aluop, funct, zero, aluout1, aluout2);
 
+  // Choosing output of execute module
+  assign memadr  = (memsrc) ? aluout1 << 2 : aluout2;
+  assign memdata = (memsrc) ? aluout2 : data2;
   // MEMORY STAGE
-  memory memory (aluout, data2, memread, memwrite, clk, readdata);
+  memory memory (memadr, memdata, memread, memwrite, clk, readdata);
 
   // WRITEBACK STAGE
-  writeback writeback (aluout, readdata, data2, memtoreg, writedata, writedata2);
+  writeback writeback (aluout2, readdata, data2, memtoreg, writedata, writedata2);
 
 endmodule
