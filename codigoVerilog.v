@@ -10,6 +10,7 @@ module fetch (input lt, zero, rst, clk, branch, input [31:0] sigext, output [31:
     case(funct3)
       3'b000: new_pc <= (branch & zero) ? pc_4 + sigext : pc_4; // beq
       3'b100: new_pc <= (branch & lt)   ? pc_4 + sigext : pc_4; // blt
+      3'b101: new_pc <= (branch & (zero | !lt)) ? pc_4 + sigext : pc_4; // bge
       default: new_pc <= pc_4;
     endcase
   end
@@ -22,14 +23,22 @@ module fetch (input lt, zero, rst, clk, branch, input [31:0] sigext, output [31:
 
   initial begin
     // Testes
-    //BLT
+    //BGE
     inst_mem[0] <= 32'h00000000; // 0  nop
-    inst_mem[1] <= 32'h00206413; // 4  ori x8, x0, 2
-    inst_mem[2] <= 32'h00306493; // 8  ori x9, x0, 3
-    inst_mem[3] <= 32'h00944463; // 12 blt x8 x9 8 pula duas instrucoes, vai para 24
+    //00100 00101 101 01100 1100011
+    //Nessa instrução x9 = 9, x8 = 8 
+    inst_mem[1] <= 32'h0042d663; //4 bge rs1(x5),rs2(x4), 12 tenta e deve ir para a instrução pc+4+12 = 20
+    // 0000 0000 0010 0000 0110 0100 0001 0011
+    inst_mem[2] <= 32'h00206413; // 8  ori x8, x0, 2
+    // 0000 0000 0011 0000 0110 0100 1001 0011
+    inst_mem[3] <= 32'h00306493; // 12  ori x9, x0, 3
+    //inst_mem[3] <= 32'h00944463; // 12 blt x8 x9 8 pula duas instrucoes, vai para 24
+    // 0000 0010 0100 1000 0100 0001 0011
     inst_mem[4] <= 32'h00248413; // 16 addi x8, x9, 2  
+    // 0000 0101 0100 1000 0100 0001 0011
     inst_mem[5] <= 32'h00548413; // 20 addi x8, x9, 5  
-    inst_mem[6] <= 32'hfe944ae3; // 24 blt x8 x9 -12 volta duas instrucoes, vai para 16
+   // inst_mem[6] <= 32'hfe944ae3; // 24 blt x8 x9 -12 volta duas instrucoes, vai para 16
+    
     
   end
   
@@ -85,7 +94,7 @@ module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc2, a
         regwrite  <= 1;
         aluop     <= 2;
 			end
-		  7'b1100011: begin // beq, blt == 99
+		  7'b1100011: begin // beq, blt, bge == 99
         branch    <= 1;
         aluop     <= 1;
         ImmGen    <= {{19{inst[31]}},inst[31],inst[7],inst[30:25],inst[11:8],1'b0};
@@ -217,7 +226,7 @@ endmodule
 module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout2, output lt, zero);
   
 	assign lt   = (aluout2[31]);  // Vendo pelo bit de sinal
-  assign zero = (aluout2 == 0); // Zero recebe um valor lógico caso aluout2 seja igual a zero.
+  	assign zero = (aluout2 == 0); // Zero recebe um valor lógico caso aluout2 seja igual a zero.
   
   always @(alucontrol, A, B) begin
       case (alucontrol)
