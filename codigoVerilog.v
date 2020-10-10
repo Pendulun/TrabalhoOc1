@@ -8,7 +8,7 @@ module fetch (input lt, zero, rst, clk, branch, jump, input [31:0] sigext, outpu
 
   always @(funct3 or jump) begin
     if(jump) 
-      new_pc <= sigext;
+      new_pc <= pc_4 + sigext;
     else
       begin
         case(funct3)
@@ -27,23 +27,14 @@ module fetch (input lt, zero, rst, clk, branch, jump, input [31:0] sigext, outpu
   assign inst = inst_mem[pc[31:2]];
 
   initial begin
-    // Testes
-    //BGE
-    inst_mem[0] <= 32'h001452b7;
-    //inst_mem[0] <= 32'h00000000; // 0  nop
-    // 0000 0000 0010 0000 0110 0100 0001 0011
-    //inst_mem[1] <= 32'h00206413; // 4  ori x8, x0, 2
-    // 0000 0000 0011 0000 0110 0100 1001 0011
-    //inst_mem[2] <= 32'h00306493; // 8  ori x9, x0, 3
-    //0000 0010 1000 0000 0000 0000 0110 1111
-    //inst_mem[3] <= 32'h0280006f; // 12  J x0, 20 ou seja, vai para a instrução 5
-    // 0000 0010 0100 1000 0100 0001 0011
-    //inst_mem[4] <= 32'h00248413; // 16 addi x8, x9, 2 
-    // 0000 0101 0100 1000 0100 0001 0011
-    //inst_mem[5] <= 32'h00548413; // 20 addi x8, x9, 5  
-    // 1000 0010 0000 0000 0000 0000 0110 1111
-    //inst_mem[6] <= 32'h0080006f; // 24 J x0, 4 ou seja, volta para a instrução 1
-    
+    // Testes J
+    inst_mem[0] <= 32'h00000000;  // 0  nop
+  inst_mem[1] <= 32'h00c0006f;  // 4  j 12 , pula para instrucao 16
+  inst_mem[2] <= 32'h00306493;  // 8  ori x9, x0, 3
+    inst_mem[3] <= 32'h00248413;  // 12 addi x8, x9, 2  
+    inst_mem[4] <= 32'h0080006f;  // 16 j 8, pula para instrucao 24
+    inst_mem[5] <= 32'h5337;    // 20 lui x6 5
+    inst_mem[6] <= 32'h7CD2B7;    // 24 lui x5 1997
   end
   
 endmodule
@@ -147,8 +138,8 @@ module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc2, a
         ImmGen    <= {{20{inst[31]}},inst[31:25],inst[11:7]};
       end
           7'b1101111: begin //Jump J baseado no JAL
-        jump <= 1;
-              ImmGen <= {{12'b0},inst[31],inst[19:12],inst[20],inst[30:21]};
+          jump <= 1;
+            ImmGen <= {{12'b0},inst[31],inst[19:12],inst[20],inst[30:21]};
             end
     endcase
   end
