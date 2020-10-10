@@ -29,19 +29,20 @@ module fetch (input lt, zero, rst, clk, branch, jump, input [31:0] sigext, outpu
   initial begin
     // Testes
     //BGE
-    inst_mem[0] <= 32'h00000000; // 0  nop
+    inst_mem[0] <= 32'h001452b7;
+    //inst_mem[0] <= 32'h00000000; // 0  nop
     // 0000 0000 0010 0000 0110 0100 0001 0011
-    inst_mem[1] <= 32'h00206413; // 4  ori x8, x0, 2
+    //inst_mem[1] <= 32'h00206413; // 4  ori x8, x0, 2
     // 0000 0000 0011 0000 0110 0100 1001 0011
-    inst_mem[2] <= 32'h00306493; // 8  ori x9, x0, 3
+    //inst_mem[2] <= 32'h00306493; // 8  ori x9, x0, 3
     //0000 0010 1000 0000 0000 0000 0110 1111
-    inst_mem[3] <= 32'h0280006f; // 12  J x0, 20 ou seja, vai para a instrução 5
+    //inst_mem[3] <= 32'h0280006f; // 12  J x0, 20 ou seja, vai para a instrução 5
     // 0000 0010 0100 1000 0100 0001 0011
-    inst_mem[4] <= 32'h00248413; // 16 addi x8, x9, 2 
+    //inst_mem[4] <= 32'h00248413; // 16 addi x8, x9, 2 
     // 0000 0101 0100 1000 0100 0001 0011
-    inst_mem[5] <= 32'h00548413; // 20 addi x8, x9, 5  
+    //inst_mem[5] <= 32'h00548413; // 20 addi x8, x9, 5  
     // 1000 0010 0000 0000 0000 0000 0110 1111
-    inst_mem[6] <= 32'h0080006f; // 24 J x0, 4 ou seja, volta para a instrução 1
+    //inst_mem[6] <= 32'h0080006f; // 24 J x0, 4 ou seja, volta para a instrução 1
     
   end
   
@@ -124,7 +125,7 @@ module ControlUnit (input [6:0] opcode, input [31:0] inst, output reg alusrc2, a
         alusrc2   <= 1;
         regwrite  <= 1;
         aluop     <= 3;
-              ImmGen   <= {inst[31:12],12'b0};
+              ImmGen   <= {inst[31:12]};
       end
           7'b0001010: begin // LWI == 10 OBS.: Meu funct será 5, para cair que alucontrol = 5 (usei funct 5 de tipo r emprestada)
         alusrc2   <= 0;
@@ -242,7 +243,7 @@ module ALU (input [3:0] alucontrol, input [31:0] A, B, output reg [31:0] aluout2
         1: aluout2 <= A | B; // OR
         2: aluout2 <= A + B; // ADD
         3: aluout2 <= A << B; //SLLI
-        4: aluout2 <= B; //LUI
+        4: aluout2 <= {B,12'b0}; //LUI
         5: aluout2 <= (A + B) << 2; //LWI
         6: aluout2 <= A - B; // SUB
         //7: aluout2 <= A < B ? 32'd1:32'd0; //SLT
