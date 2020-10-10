@@ -27,14 +27,8 @@ module fetch (input lt, zero, rst, clk, branch, jump, input [31:0] sigext, outpu
   assign inst = inst_mem[pc[31:2]];
 
   initial begin
-    // Testes J
+    // Testes 
     inst_mem[0] <= 32'h00000000;  // 0  nop
-  inst_mem[1] <= 32'h00c0006f;  // 4  j 12 , pula para instrucao 16
-  inst_mem[2] <= 32'h00306493;  // 8  ori x9, x0, 3
-    inst_mem[3] <= 32'h00248413;  // 12 addi x8, x9, 2  
-    inst_mem[4] <= 32'h0080006f;  // 16 j 8, pula para instrucao 24
-    inst_mem[5] <= 32'h5337;    // 20 lui x6 5
-    inst_mem[6] <= 32'h7CD2B7;    // 24 lui x5 1997
   end
   
 endmodule
